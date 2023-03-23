@@ -4,11 +4,11 @@
 // }
 
 function getListItem() {
-    var listItemStorage = localStorage.getItem('listItem') ? JSON.parse(localStorage.getItem('listItem')) : [];
     $("#list-items").empty();
-    for (let i = 0; i < listItemStorage.length; i++) {
-        var item = listItemStorage[i];
-        $("#list-items").append(`<tr>
+    $.get('https://641c45701a68dc9e46050e0b.mockapi.io/product', function (listItemStorage, status) {
+        for (let i = 0; i < listItemStorage.length; i++) {
+            var item = listItemStorage[i];
+            $("#list-items").append(`<tr>
           <td>${item.id}</td>
           <td>${item.name}</td>
           <td>${item.price}</td>
@@ -20,29 +20,29 @@ function getListItem() {
             <button onclick="removeItem(${item.id})" type="button" class="btn btn-info open-modal">Remove</button>
           </td>
         </tr>`);
-    }
+        }
+    })
 };
 
 function openEditModal(id) {
-    var listItemStorage = localStorage.getItem('listItem') ? JSON.parse(localStorage.getItem('listItem')) : [];
-    var itemChoice = listItemStorage.find(item => item.id === id);
-    $('#name').val(itemChoice.name);
-    $('#price').val(itemChoice.price);
-    $('#info').val(itemChoice.info);
-    $('#modal').show();
-    localStorage.setItem('idEditing', id);
+    $.get(`https://641c45701a68dc9e46050e0b.mockapi.io/product/${id}`, function (itemChoice, status) {
+        $('#name').val(itemChoice.name);
+        $('#price').val(itemChoice.price);
+        $('#info').val(itemChoice.info);
+        $('#modal').show();
+        localStorage.setItem('idEditing', id);
+    })
+
 }
 
 function removeItem(id) {
-    var listItemStorage = localStorage.getItem('listItem') ? JSON.parse(localStorage.getItem('listItem')) : [];
-    var itemChoiceIndex = listItemStorage.findIndex(item => item.id === id);
-    listItemStorage.splice(itemChoiceIndex, 1);
-    localStorage.setItem('listItem', JSON.stringify(listItemStorage));
-    getListItem();
+    $.ajax({url: `https://641c45701a68dc9e46050e0b.mockapi.io/product/${id}`, method: 'DELETE', success: function (res) {
+        getListItem();
+    }})
 }
 
 $(document).ready(function () {
-
+    getListItem();
     function resetForm() {
         $('#name').val('');
         $('#price').val('');
@@ -76,39 +76,39 @@ $(document).ready(function () {
     })
 
     $('.submit-button').click(function () {
-        var listItemStorage = localStorage.getItem('listItem') ? JSON.parse(localStorage.getItem('listItem')) : [];
         var idEditing = localStorage.getItem('idEditing');
         var name = $('#name').val();
         var price = $('#price').val();
         var info = $('#info').val();
+        var itemData = {
+            name,
+            price,
+            info,
+        }
         if (idEditing) {
             // logic update
-            for (let i = 0; i < listItemStorage.length; i++) {
-                var item = listItemStorage[i];
-                if (item.id == idEditing) {
-                    listItemStorage[i] = {
-                        name,
-                        price,
-                        info,
-                        id: idEditing
-                    };
+            $.ajax({
+                url: `https://641c45701a68dc9e46050e0b.mockapi.io/product/${idEditing}`,
+                method: 'PUT',
+                data: itemData,
+                success: function (res) {
+                    getListItem();
+                    localStorage.removeItem('idEditing');
+                    console.log(res)
                 }
-            }
-            localStorage.removeItem('idEditing');
-            localStorage.setItem('listItem', JSON.stringify(listItemStorage));
+            })
         } else {
-            var itemData = {
-                name,
-                price,
-                info,
-                id: listItemStorage.length + 1
-            }
-            listItemStorage.push(itemData);
-            localStorage.setItem('listItem', JSON.stringify(listItemStorage));
+            $.ajax({
+                url : 'https://641c45701a68dc9e46050e0b.mockapi.io/product',
+                method: 'POST',
+                data: itemData,
+                success: function (res) {
+                    getListItem();
+                    console.log(res)
+                }
+            })
         }
         $('#modal').hide();
-        getListItem();
         resetForm();
     })
-    getListItem();
 })
